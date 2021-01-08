@@ -50,7 +50,7 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final List<Transaction> _userTransactions = [
     Transaction(
         amount: 69.99, date: DateTime.now(), id: '0001', title: 'Air Jordan 1'),
@@ -71,6 +71,22 @@ class _MyHomePageState extends State<MyHomePage> {
   ];
 
   bool _showChart = false;
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addObserver(this);
+    super.initState();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    print(state);
+  }
+
+  @override
+  dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+  }
 
   List<Transaction> get _recentTransaction {
     return _userTransactions.where((tx) {
@@ -105,11 +121,46 @@ class _MyHomePageState extends State<MyHomePage> {
         });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    final PreferredSizeWidget appBar = Platform.isIOS
+  List<Widget> _buildLandscape(double heightRatio, Widget txList) {
+    return [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Show Chart',
+            style: Theme.of(context).textTheme.title,
+          ),
+          Switch.adaptive(
+              activeColor: Theme.of(context).primaryColor,
+              value: _showChart,
+              onChanged: (val) {
+                setState(() {
+                  _showChart = val;
+                });
+              })
+        ],
+      ),
+      _showChart
+          ? Container(
+              height: heightRatio * 0.7,
+              child: Chart(_recentTransaction),
+            )
+          : txList
+    ];
+  }
+
+  List<Widget> _buildPortrait(double heightRatio, Widget txList) {
+    return [
+      Container(
+        height: heightRatio * 0.3,
+        child: Chart(_recentTransaction),
+      ),
+      txList
+    ];
+  }
+
+  Widget _buildAppBar() {
+    return Platform.isIOS
         ? CupertinoNavigationBar(
             middle: Text('Personal Expense'),
             trailing: Row(
@@ -134,6 +185,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   })
             ],
           );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final PreferredSizeWidget appBar = _buildAppBar();
     final appStatusBar = MediaQuery.of(context).padding.top;
     final heightRatio = MediaQuery.of(context).size.height -
         appBar.preferredSize.height -
@@ -148,37 +206,8 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            if (isLandscape)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Show Chart',
-                    style: Theme.of(context).textTheme.title,
-                  ),
-                  Switch.adaptive(
-                      activeColor: Theme.of(context).primaryColor,
-                      value: _showChart,
-                      onChanged: (val) {
-                        setState(() {
-                          _showChart = val;
-                        });
-                      })
-                ],
-              ),
-            if (!isLandscape)
-              Container(
-                height: heightRatio * 0.3,
-                child: Chart(_recentTransaction),
-              ),
-            if (!isLandscape) txList,
-            if (isLandscape)
-              _showChart
-                  ? Container(
-                      height: heightRatio * 0.7,
-                      child: Chart(_recentTransaction),
-                    )
-                  : txList
+            if (isLandscape) ..._buildLandscape(heightRatio, txList),
+            if (!isLandscape) ..._buildPortrait(heightRatio, txList),
           ],
         ),
       ),
