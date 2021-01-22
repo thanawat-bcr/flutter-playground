@@ -4,6 +4,7 @@ import '../screens/product_detail_screen.dart';
 
 import '../providers/product.dart';
 import '../providers/cart.dart';
+import '../providers/auth.dart';
 
 class ProductItem extends StatelessWidget {
   @override
@@ -11,6 +12,7 @@ class ProductItem extends StatelessWidget {
     // listen: false to disable re-build everything
     final product = Provider.of<Product>(context, listen: false);
     final cart = Provider.of<Cart>(context, listen: false);
+    final auth = Provider.of<Auth>(context, listen: false);
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: GridTile(
@@ -39,7 +41,7 @@ class ProductItem extends StatelessWidget {
               icon: Icon(
                   product.isFavorite ? Icons.favorite : Icons.favorite_border),
               onPressed: () {
-                product.toggleFavariteStatus();
+                product.toggleFavariteStatus(auth.token, auth.userId);
               },
             ),
             // *** child: for widgets which is constants eg. Label

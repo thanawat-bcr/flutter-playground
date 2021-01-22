@@ -44,6 +44,10 @@ class Products with ChangeNotifier {
 
   // var _showFavoritesOnly = false;
 
+  final String authToken;
+  final String userId;
+  Products(this.authToken, this.userId, this._items);
+
   List<Product> get items {
     // if (_showFavoritesOnly) {
     //   return _items.where((prod) => prod.isFavorite).toList();
@@ -69,13 +73,20 @@ class Products with ChangeNotifier {
     return _items.firstWhere((prod) => prod.id == id);
   }
 
-  Future<void> fetchProducts() async {
-    const url =
-        'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products.json';
+  Future<void> fetchProducts([bool filterByUser = false]) async {
+    final filterString =
+        filterByUser ? 'orderBy="creatorId"&equalTo="$userId"' : '';
+    var url =
+        'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products.json?auth=$authToken&$filterString';
     try {
+      // http.get -> Headers
       final res = await http.get(url);
       final data = json.decode(res.body) as Map<String, dynamic>;
       if (data == null) return;
+      url =
+          'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/userFavorite/$userId.json?auth=$authToken';
+      final favRes = await http.get(url);
+      final favData = json.decode(favRes.body);
       final List<Product> loadedProducts = [];
       data.forEach((id, val) {
         loadedProducts.add(Product(
@@ -84,7 +95,7 @@ class Products with ChangeNotifier {
           description: val['description'],
           price: val['price'],
           imageUrl: val['imageUrl'],
-          isFavorite: val['isFavorite'],
+          isFavorite: favData == null ? false : favData[id] ?? false,
         ));
       });
       _items = loadedProducts;
@@ -95,8 +106,8 @@ class Products with ChangeNotifier {
   }
 
   Future<void> addProduct(Product p) async {
-    const url =
-        'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products.json';
+    final url =
+        'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products.json?auth=$authToken';
     try {
       final res = await http.post(
         url,
@@ -105,7 +116,7 @@ class Products with ChangeNotifier {
           'description': p.description,
           'imageUrl': p.imageUrl,
           'price': p.price,
-          'isFavorite': p.isFavorite,
+          'creatorId': userId,
         }),
       );
       final newProduct = Product(
@@ -126,7 +137,7 @@ class Products with ChangeNotifier {
     final prodIndex = _items.indexWhere((prod) => prod.id == id);
     if (prodIndex >= 0) {
       final url =
-          'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products/$id.json';
+          'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products/$id.json?auth=$authToken';
       await http.patch(url,
           body: json.encode({
             'title': p.title,
@@ -142,7 +153,7 @@ class Products with ChangeNotifier {
 
   Future<void> deleteProduct(String id) async {
     final url =
-        'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products/$id.json';
+        'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products/$id.json?auth=$authToken';
 
     // Save product in memory for rollback when error
     final index = _items.indexWhere((prod) => prod.id == id);

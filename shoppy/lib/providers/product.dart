@@ -8,6 +8,7 @@ class Product with ChangeNotifier {
   final String description;
   final double price;
   final String imageUrl;
+
   bool isFavorite;
 
   Product({
@@ -24,15 +25,17 @@ class Product with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggleFavariteStatus() async {
+  Future<void> toggleFavariteStatus(String token, String userId) async {
     final status = isFavorite;
     isFavorite = !isFavorite;
     notifyListeners();
     final url =
-        'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/products/$id.json';
+        'https://flutter-shoppy-c0de4-default-rtdb.firebaseio.com/userFavorite/$userId/$id.json?auth=$token';
     try {
-      final res =
-          await http.patch(url, body: json.encode({'isFavorite': isFavorite}));
+      final res = await http.put(url,
+          body: json.encode(
+            isFavorite,
+          ));
       if (res.statusCode >= 400) {
         _setFavValue(status);
       }
